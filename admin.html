@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ELORA Admin</title><link rel="stylesheet" href="admin.css"></head>
+<body>
+<main class="wrap">
+  <div class="top"><div><div class="brand">ELORA ADMIN</div><p>Online dashboard — changes are saved to the live database.</p></div><a href="index.html">View Store</a></div>
+  <section id="loginBox" class="panel"><h1>Admin Login</h1><p>Use the email/password account you created in Supabase Authentication.</p><input id="email" type="email" placeholder="Admin email"><input id="password" type="password" placeholder="Password"><button id="loginBtn">LOGIN</button><p id="loginMsg" class="msg"></p></section>
+  <section id="dashboard" hidden>
+    <div class="toolbar"><span id="userEmail"></span><button id="logoutBtn" class="secondary">Logout</button></div>
+    <section class="panel"><h2>Orders</h2><p class="cod-admin-note">Payment method: <b>Cash on Delivery only</b></p><div class="order-tools"><button id="refreshOrders" class="secondary" type="button">REFRESH ORDERS</button><select id="orderFilter"><option value="All">All statuses</option><option>New</option><option>Confirmed</option><option>Shipped</option><option>Delivered</option><option>Cancelled</option></select></div><p id="ordersMsg" class="msg"></p><div id="orderList"></div></section>
+    <section class="panel"><h2>Ratings & Reviews</h2><p>Customer reviews are private until you approve them. You can approve, hide, or delete reviews here.</p><div class="order-tools"><button id="refreshReviews" class="secondary" type="button">REFRESH REVIEWS</button><select id="reviewFilter"><option value="all">All reviews</option><option value="pending">Pending approval</option><option value="approved">Approved</option></select></div><p id="reviewsMsg" class="msg"></p><div id="reviewList"></div></section>
+    <section class="panel"><h2>Website Settings</h2><div class="grid">
+      <label>Brand name<input id="brandName"></label><label>Phone<input id="phone"></label><label>WhatsApp number<input id="whatsapp" placeholder="923001234567"></label><label>Facebook link<input id="facebook"></label><label>Instagram link<input id="instagram"></label><label>TikTok link<input id="tiktok"></label><label>Hero title<input id="heroTitle"></label><label>Hero subtitle<input id="heroSubtitle"></label><label class="full">About text<textarea id="aboutText" rows="4"></textarea></label>
+    </div><button id="saveSettings">SAVE WEBSITE SETTINGS</button><p id="settingsMsg" class="msg"></p></section>
+    <section class="panel"><h2 id="productFormTitle">Add Product</h2><input type="hidden" id="productId"><div class="grid"><label>Product name<input id="productName" list="perfumeNames"><datalist id="perfumeNames"><option value="Ameer-ul-Oud"><option value="Sabaya"><option value="Zarar"><option value="Cool-Elexer"><option value="Aromatic"><option value="Oriental"></datalist></label><label>Old price<input id="oldPrice" type="number" min="0" placeholder="2500"></label><label>Sale price<input id="price" type="number" min="0" required></label><label>Tag<input id="tag" placeholder="Best Seller"></label><label class="full">Product photo<input id="productImage" type="file" accept="image/*"></label></div><div class="actions"><button id="saveProduct">SAVE PRODUCT</button><button id="cancelEdit" class="secondary" hidden>CANCEL EDIT</button></div><p id="productMsg" class="msg"></p></section>
+    <section class="panel"><h2>Products</h2><div id="productList"></div></section>
+    <section class="panel"><h2>Change Admin Password</h2><p>Your password is handled by Supabase Auth, not stored in this website.</p><input id="newPassword" type="password" placeholder="New password (minimum 8 characters)"><button id="changePassword">CHANGE PASSWORD</button><p id="passwordMsg" class="msg"></p></section>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><script src="admin.js"></script>
+</body></html>
