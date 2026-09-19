@@ -69,6 +69,9 @@ document.getElementById("searchInput").addEventListener("input",e=>{const q=e.ta
 document.getElementById("checkoutForm").addEventListener("submit",async e=>{
   e.preventDefault();if(!cart.length)return;const msg=document.getElementById("orderMsg");msg.textContent="Placing COD order…";
   const {data:orderId,error}=await db.rpc("create_order",{p_customer_name:document.getElementById("customerName").value.trim(),p_phone:document.getElementById("customerPhone").value.trim(),p_address:document.getElementById("customerAddress").value.trim(),p_city:document.getElementById("customerCity").value.trim(),p_notes:document.getElementById("customerNotes").value.trim(),p_items:cart.map(x=>({product_id:x.id,quantity:x.quantity})),p_payment_method:"Cash on Delivery"});
-  if(error){msg.textContent=error.message;return}msg.textContent=`COD order placed successfully. Order #${orderId.slice(0,8).toUpperCase()}.`;cart=[];saveCart();e.target.reset();
+  if(error){msg.textContent=error.message;return}
+  const orderNumber=typeof orderId==="string"?orderId:(orderId&&orderId.order_number)||"";
+  msg.textContent=orderNumber?`COD order placed successfully. Order #${orderNumber}.`:"COD order placed successfully.";
+  cart=[];saveCart();e.target.reset();
 });
 loadStore();
