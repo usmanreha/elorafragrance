@@ -16,11 +16,11 @@ async function loadStore(){
   document.getElementById("aboutText").textContent=settings.about_text||fallbackSettings.about_text;
   document.getElementById("footerBrand").textContent=settings.brand_name||fallbackSettings.brand_name;
   const ph=document.getElementById("phoneLink"),wa=document.getElementById("waLink");
-   ph.innerHTML=settings.phone?'<span class="brand-icon">☎</span><span class="brand-text">'+settings.phone+'</span>':'<span class="brand-icon">☎</span><span class="brand-text"></span>';
+   ph.innerHTML=settings.phone?'<span class="brand-icon phone-icon">☎</span><span class="brand-text">'+settings.phone+'</span>':'<span class="brand-icon phone-icon">☎</span><span class="brand-text"></span>';
    ph.href=settings.phone?"tel:"+settings.phone.replace(/[^\d+]/g,""):"#";
-   wa.innerHTML=settings.whatsapp?'<span class="brand-icon">WA</span><span class="brand-text">WhatsApp</span>':'<span class="brand-icon">WA</span><span class="brand-text"></span>';
+   wa.innerHTML=settings.whatsapp?'<span class="brand-icon wa-icon">WA</span><span class="brand-text">WhatsApp</span>':'<span class="brand-icon wa-icon">WA</span><span class="brand-text"></span>';
    wa.href=settings.whatsapp?"https://wa.me/"+settings.whatsapp.replace(/\D/g,""):"#";
-   for(const [id,key,label,icon] of [["fbLink","facebook","Facebook","f"],["igLink","instagram","Instagram","◎"],["ttLink","tiktok","TikTok","♪"]]){const a=document.getElementById(id);a.innerHTML=settings[key]?'<span class="brand-icon">'+icon+'</span><span class="brand-text">'+label+'</span>':'<span class="brand-icon">'+icon+'</span><span class="brand-text"></span>';a.href=settings[key]||"#";a.style.display=settings[key]?"inline-flex":"none"}
+   for(const [id,key,label,icon,cls] of [["fbLink","facebook","Facebook","f","fb-icon"],["igLink","instagram","Instagram","◎","ig-icon"],["ttLink","tiktok","TikTok","♪","tt-icon"]]){const a=document.getElementById(id);a.innerHTML=settings[key]?'<span class="brand-icon '+cls+'">'+icon+'</span><span class="brand-text">'+label+'</span>':'<span class="brand-icon '+cls+'">'+icon+'</span><span class="brand-text"></span>';a.href=settings[key]||"#";a.style.display=settings[key]?"inline-flex":"none"}
    const {data:products,error}=await db.from("products").select("*").order("sort_order",{ascending:true}).order("created_at",{ascending:false});
   const box=document.getElementById("products");
   if(error){box.innerHTML="<p>Products could not be loaded. Check Supabase setup.</p>";return}
@@ -103,6 +103,9 @@ document.getElementById("searchInput").addEventListener("input",e=>{const q=e.ta
 document.getElementById("checkoutForm").addEventListener("submit",async e=>{
   e.preventDefault();if(!cart.length)return;const msg=document.getElementById("orderMsg");msg.textContent="Placing COD order…";
   const {data:orderId,error}=await db.rpc("create_order",{p_customer_name:document.getElementById("customerName").value.trim(),p_phone:document.getElementById("customerPhone").value.trim(),p_address:document.getElementById("customerAddress").value.trim(),p_city:document.getElementById("customerCity").value.trim(),p_notes:document.getElementById("customerNotes").value.trim(),p_items:cart.map(x=>({product_id:x.id,quantity:x.quantity})),p_payment_method:"Cash on Delivery"});
-  if(error){msg.textContent=error.message;return}msg.textContent=`COD order placed successfully. Order #${orderId.slice(0,8).toUpperCase()}.`;cart=[];saveCart();e.target.reset();
+  if(error){msg.textContent=error.message;return}
+  const orderNumber = data?.order_number || "ELORA-ORDER";
+  msg.textContent=`COD order placed successfully. Order #${String(orderNumber)}.`;
+  cart=[];saveCart();e.target.reset();
 });
 loadStore();
