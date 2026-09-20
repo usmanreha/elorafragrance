@@ -79,6 +79,8 @@ function openCart(){
   const panel=document.getElementById("cartPanel");
   const overlay=document.getElementById("cartOverlay");
   if(!panel)return;
+const orderMsg = document.getElementById("orderMsg");
+if (orderMsg) orderMsg.textContent = "";
   panel.hidden=false;
   panel.classList.add("cart-open");
   panel.setAttribute("aria-hidden","false");
@@ -126,7 +128,7 @@ document.getElementById("checkoutForm").addEventListener("submit",async e=>{
       p_address:document.getElementById("customerAddress").value.trim(),
       p_city:document.getElementById("customerCity").value.trim(),
       p_notes:document.getElementById("customerNotes").value.trim(),
-      p_items:cart.map(x=>({product_id:Number(x.id),quantity:Number(x.quantity)})),
+      p_items:cart.map(x=>({product_id:x.id,quantity:Number(x.quantity)})),
       p_payment_method:"Cash on Delivery"
     };
     const rpcResult=await Promise.race([
@@ -144,7 +146,8 @@ document.getElementById("checkoutForm").addEventListener("submit",async e=>{
     msg.textContent=`COD order placed successfully. Order ID: ${shortId}.`;
     cart=[];
     saveCart();
-    form.reset();
+    form.reset();  
+
   }catch(err){
     console.error("ELORA checkout exception",err);
     msg.textContent=err?.message||"Could not place the order. Please try again.";
