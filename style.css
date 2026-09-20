@@ -165,4 +165,17 @@ body{overflow-x:hidden;}
   .products { gap:8px; }
   .card h3 { font-size:15px; }
   .card .add-cart, .card .review-btn { font-size:10px; }
+}/* FIX REVIEWS HEADING OVERLAP */
+.reviews-section .section-head {
+  display: block;
 }
+
+.reviews-section .section-head h2 {
+  margin: 10px 0 16px;
+  line-height: 1.2;
+}
+
+.reviews-section .reviews-intro {
+  margin-top: 0;
+}
+
