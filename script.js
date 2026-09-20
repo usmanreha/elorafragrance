@@ -36,7 +36,7 @@ function renderProducts(products){
   const box=document.getElementById("products");
   document.getElementById("shopMsg").textContent=products.length?`${products.length} fragrance${products.length===1?"":"s"} available`:"";
   if(!products.length){box.innerHTML='<div class="empty-shop"><p>No perfumes have been added yet.</p><p>Open the Admin page to add Ameer-ul-Oud, Sabaya, Zarar, Cool-Elexer, Aromatic or Oriental.</p></div>';return}
-  box.innerHTML=products.map(p=>`<article class="card">${p.tag?`<span class="tag">${esc(p.tag)}</span>`:""}${p.image_url?`<img src="${esc(p.image_url)}" alt="${esc(p.name)}">`:`<div class="no-photo">PHOTO COMING SOON</div>`}<h3>${esc(p.name)}</h3>${reviewSummary(p.id)}<div class="price">${p.old_price?`<span class="old">Rs. ${esc(p.old_price)}</span>`:""}${money(p.price).replace("Rs. ","Rs. ")}</div><div class="card-actions"><button class="add-cart" type="button" data-id="${esc(p.id)}" data-name="${esc(p.name)}" data-price="${Number(p.price)}">ADD TO CART</button><button class="review-btn" type="button" data-review-open="${esc(p.id)}">WRITE A REVIEW</button></div>${reviewForm(p)}</article>`).join("");
+  box.innerHTML=products.map(p=>`<article class="card">${p.tag?`<span class="tag">${esc(p.tag)}</span>`:""}${p.image_url?`<img src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy" onerror="this.onerror=null;this.src='hero_ameer.png';">`:`<img class="product-fallback" src="hero_ameer.png" alt="${esc(p.name)}" loading="lazy">`}<h3>${esc(p.name)}</h3>${reviewSummary(p.id)}<div class="price">${p.old_price?`<span class="old">Rs. ${esc(p.old_price)}</span>`:""}${money(p.price).replace("Rs. ","Rs. ")}</div><div class="card-actions"><button class="add-cart" type="button" data-id="${esc(p.id)}" data-name="${esc(p.name)}" data-price="${Number(p.price)}">ADD TO CART</button><button class="review-btn" type="button" data-review-open="${esc(p.id)}">WRITE A REVIEW</button></div>${reviewForm(p)}</article>`).join("");
   box.querySelectorAll(".add-cart").forEach(b=>b.addEventListener("click",()=>{addToCart({id:b.dataset.id,name:b.dataset.name,price:Number(b.dataset.price)})}));
   box.querySelectorAll("[data-review-open]").forEach(b=>b.addEventListener("click",()=>{const el=document.getElementById(`review-${b.dataset.reviewOpen}`);if(el)el.hidden=false}));
   box.querySelectorAll("[data-review-close]").forEach(b=>b.addEventListener("click",()=>{const el=document.getElementById(`review-${b.dataset.reviewClose}`);if(el)el.hidden=true}));
@@ -101,11 +101,34 @@ function bindCartControls(){
 bindCartControls();
 document.getElementById("searchInput").addEventListener("input",e=>{const q=e.target.value.trim().toLowerCase();renderProducts(allProducts.filter(p=>String(p.name||"").toLowerCase().includes(q)||String(p.tag||"").toLowerCase().includes(q)))})
 document.getElementById("checkoutForm").addEventListener("submit",async e=>{
-  e.preventDefault();if(!cart.length)return;const msg=document.getElementById("orderMsg");msg.textContent="Placing COD order…";
-  const {data:orderId,error}=await db.rpc("create_order",{p_customer_name:document.getElementById("customerName").value.trim(),p_phone:document.getElementById("customerPhone").value.trim(),p_address:document.getElementById("customerAddress").value.trim(),p_city:document.getElementById("customerCity").value.trim(),p_notes:document.getElementById("customerNotes").value.trim(),p_items:cart.map(x=>({product_id:x.id,quantity:x.quantity})),p_payment_method:"Cash on Delivery"});
-  if(error){msg.textContent=error.message;return}
-  const orderNumber = data?.order_number || "ELORA-ORDER";
-  msg.textContent=`COD order placed successfully. Order #${String(orderNumber)}.`;
-  cart=[];saveCart();e.target.reset();
+  e.preventDefault();
+  if(!cart.length)return;
+  const form=e.currentTarget;
+  const msg=document.getElementById("orderMsg");
+  const submit=form.querySelector(".submit-btn");
+  msg.textContent="Placing COD order…";
+  if(submit){submit.disabled=true;submit.textContent="PLACING ORDER…";}
+  try{
+    const {data:orderData,error}=await db.rpc("create_order",{
+      p_customer_name:document.getElementById("customerName").value.trim(),
+      p_phone:document.getElementById("customerPhone").value.trim(),
+      p_address:document.getElementById("customerAddress").value.trim(),
+      p_city:document.getElementById("customerCity").value.trim(),
+      p_notes:document.getElementById("customerNotes").value.trim(),
+      p_items:cart.map(x=>({product_id:x.id,quantity:x.quantity})),
+      p_payment_method:"Cash on Delivery"
+    });
+    if(error){msg.textContent=error.message;return}
+    const orderRow=Array.isArray(orderData)?orderData[0]:orderData;
+    const orderNumber=orderRow?.order_number || "ELORA-ORDER";
+    msg.textContent=`COD order placed successfully. Order #${String(orderNumber)}.`;
+    cart=[];
+    saveCart();
+    form.reset();
+  }catch(err){
+    msg.textContent=err?.message||"Could not place the order. Please try again.";
+  }finally{
+    if(submit){submit.disabled=false;submit.textContent="PLACE COD ORDER";}
+  }
 });
 loadStore();
