@@ -21,12 +21,23 @@ async function loadStore(){
    wa.innerHTML=settings.whatsapp?'<span class="brand-icon wa-icon">WA</span><span class="brand-text">WhatsApp</span>':'<span class="brand-icon wa-icon">WA</span><span class="brand-text"></span>';
    wa.href=settings.whatsapp?"https://wa.me/"+settings.whatsapp.replace(/\D/g,""):"#";
    for(const [id,key,label,icon,cls] of [["fbLink","facebook","Facebook","f","fb-icon"],["igLink","instagram","Instagram","◎","ig-icon"],["ttLink","tiktok","TikTok","♪","tt-icon"]]){const a=document.getElementById(id);a.innerHTML=settings[key]?'<span class="brand-icon '+cls+'">'+icon+'</span><span class="brand-text">'+label+'</span>':'<span class="brand-icon '+cls+'">'+icon+'</span><span class="brand-text"></span>';a.href=settings[key]||"#";a.style.display=settings[key]?"inline-flex":"none"}
-   const {data:products,error}=await db.from("products").select("*").order("sort_order",{ascending:true}).order("created_at",{ascending:false});
-  const box=document.getElementById("products");
-  if(error){box.innerHTML="<p>Products could not be loaded. Check Supabase setup.</p>";return}
+   const box=document.getElementById("products");
+  // Some older ELORA databases do not have created_at/sort_order on products.
+  // Retry with a minimal query instead of stopping the whole storefront.
+  let {data:products,error}=await db.from("products").select("*").order("sort_order",{ascending:true});
+  if(error){
+    console.warn("ELORA products sorted query failed; retrying basic query",error);
+    const retry=await db.from("products").select("*");
+    products=retry.data; error=retry.error;
+  }
+  if(error){box.innerHTML=`<p>Products could not be loaded: ${esc(error.message||"Supabase setup error")}</p>`;return}
   allProducts=products||[];
-  const {data:reviews,error:re}=await db.from("product_reviews").select("id,product_id,reviewer_name,rating,review_text,created_at").eq("approved",true).order("created_at",{ascending:false});
-  allReviews=re?[]:(reviews||[]);
+  let {data:reviews,error:re}=await db.from("product_reviews").select("id,product_id,reviewer_name,rating,review_text,created_at").eq("approved",true).order("created_at",{ascending:false});
+  if(re){
+    console.warn("ELORA reviews query failed; continuing without reviews",re);
+    reviews=[];
+  }
+  allReviews=reviews||[];
   renderProducts(allProducts);renderReviewSummary();renderCart();
 }
 function stars(n){const r=Math.max(0,Math.min(5,Math.round(Number(n)||0)));return "★".repeat(r)+"☆".repeat(5-r)}
@@ -109,23 +120,33 @@ document.getElementById("checkoutForm").addEventListener("submit",async e=>{
   msg.textContent="Placing COD order…";
   if(submit){submit.disabled=true;submit.textContent="PLACING ORDER…";}
   try{
-    const {data:orderData,error}=await db.rpc("create_order",{
+    const payload={
       p_customer_name:document.getElementById("customerName").value.trim(),
       p_phone:document.getElementById("customerPhone").value.trim(),
       p_address:document.getElementById("customerAddress").value.trim(),
       p_city:document.getElementById("customerCity").value.trim(),
       p_notes:document.getElementById("customerNotes").value.trim(),
-      p_items:cart.map(x=>({product_id:x.id,quantity:x.quantity})),
+      p_items:cart.map(x=>({product_id:Number(x.id),quantity:Number(x.quantity)})),
       p_payment_method:"Cash on Delivery"
-    });
-    if(error){msg.textContent=error.message;return}
-    const orderRow=Array.isArray(orderData)?orderData[0]:orderData;
-    const orderNumber=orderRow?.order_number || "ELORA-ORDER";
-    msg.textContent=`COD order placed successfully. Order #${String(orderNumber)}.`;
+    };
+    const rpcResult=await Promise.race([
+      db.rpc("create_order",payload),
+      new Promise(resolve=>setTimeout(()=>resolve({data:null,error:{message:"Order request timed out. Please check your internet connection and Supabase RPC permissions."}}),15000))
+    ]);
+    let {data:orderData,error}=rpcResult;
+    if(error){
+      console.error("ELORA create_order RPC failed",{error,payload});
+      msg.textContent=`Order failed: ${error.message||"Unknown Supabase error"}${error.code?` (code ${error.code})`:""}`;
+      return;
+    }
+    const orderId=Array.isArray(orderData)?orderData[0]:orderData;
+    const shortId=orderId?String(orderId).slice(-8):"created";
+    msg.textContent=`COD order placed successfully. Order ID: ${shortId}.`;
     cart=[];
     saveCart();
     form.reset();
   }catch(err){
+    console.error("ELORA checkout exception",err);
     msg.textContent=err?.message||"Could not place the order. Please try again.";
   }finally{
     if(submit){submit.disabled=false;submit.textContent="PLACE COD ORDER";}
