@@ -2,6 +2,15 @@
 
 .review-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px}.review-card{border:1px solid var(--line);background:#0d0d0d;padding:20px}.review-card-top{display:flex;justify-content:space-between;gap:12px;color:#777;font-size:11px}.review-card h3{font:20px Georgia,serif;margin:12px 0 8px;color:#f0c86d}.review-card p{color:#bbb;line-height:1.6;margin:0 0 12px}.review-card strong{font-size:12px;color:#eee}.stars{color:var(--gold2);letter-spacing:2px;white-space:nowrap}.rating-summary{display:flex;align-items:center;gap:7px;margin:5px 0 9px;font-size:12px}.review-count,.rating-empty{color:#777}.rating-empty{font-size:11px;margin:7px 0}.card-actions{display:grid;gap:8px}.review-btn{width:100%;border:1px solid #5d4725;background:transparent;color:var(--gold2);padding:10px;font-weight:bold;cursor:pointer}.review-box{margin-top:12px;border-top:1px solid var(--line);padding-top:14px}.review-box-head{display:flex;justify-content:space-between;align-items:center;color:#eee;margin-bottom:10px}.review-close{background:none;border:0;color:#aaa;font-size:20px;cursor:pointer}.review-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}.review-form label{font-size:11px;color:#aaa}.review-form .full{grid-column:1/-1}.review-form input,.review-form select,.review-form textarea{width:100%;margin-top:5px;padding:10px;background:#080808;color:#fff;border:1px solid #3b3426;border-radius:4px}.review-form .gold-btn{margin-top:4px;width:max-content}.review-form-msg{grid-column:1/-1;color:var(--gold2);font-size:11px;min-height:16px}.reviews-intro{color:#999;max-width:720px;margin-top:12px;line-height:1.6}.review-empty-panel{border:1px dashed #3b3426;padding:25px;color:#777;text-align:center;margin-top:25px}@media(max-width:900px){.review-summary{grid-template-columns:1fr 1fr}}@media(max-width:700px){.review-summary{grid-template-columns:1fr}.review-form{grid-template-columns:1fr}.review-form .full{grid-column:auto}}
 
+.reviews-intro {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 8px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
 /* Cart button reliability */
 .icon-btn{position:relative;z-index:50;pointer-events:auto;touch-action:manipulation}.cart-panel[hidden]{display:none !important}.cart-panel{position:relative;z-index:10}
 
