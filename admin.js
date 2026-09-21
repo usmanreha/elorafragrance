@@ -60,9 +60,11 @@ function orderCardHtml(o) {
   const options = ["New", "Confirmed", "Shipped", "Delivered", "Cancelled"];
   const statusOptions = options.map(s => `<option${s === o.status ? " selected" : ""}>${s}</option>`).join("");
   const notes = o.notes ? `<div class="full"><b>Notes</b><br>${esc(o.notes)}</div>` : "";
+  const orderNo = o.order_number ? esc(o.order_number) : esc(String(o.id||"").slice(0, 8).toUpperCase());
+  const itemsPreview = Array.isArray(o.items) && o.items.length ? `<div class="full"><b>Items (from order)</b><br>${esc(JSON.stringify(o.items))}</div>` : "";
   return `<article class="order-card">
     <div class="order-head">
-      <div><strong>Order #${esc(o.id.slice(0, 8).toUpperCase())}</strong><div class="muted">${new Date(o.created_at).toLocaleString()}</div></div>
+      <div><strong>Order ${orderNo}</strong><div class="muted">${o.created_at?new Date(o.created_at).toLocaleString():""}</div></div>
       <select class="status-select" data-id="${esc(o.id)}">${statusOptions}</select>
     </div>
     <div class="order-details">
@@ -77,8 +79,19 @@ function orderCardHtml(o) {
 }
 
 async function loadOrderItems(orderId) {
-  const { data, error } = await db.from("order_items").select("product_name,unit_price,quantity,line_total").eq("order_id", orderId);
   const el = document.getElementById(`items-${orderId}`);
+  if (!el) return;
+  // New RPC stores items inside orders.items JSON; old setup uses order_items table. Support both.
+  try{
+    const {data:ord}=await db.from("orders").select("items").eq("id",orderId).maybeSingle();
+    if(ord && Array.isArray(ord.items) && ord.items.length){
+      const prodMap={};
+      try{ const {data:prods}=await db.from("products").select("id,name,price"); (prods||[]).forEach(p=>prodMap[String(p.id)]=p); }catch(_){}
+      const rows=ord.items.map(it=>{const pid=String(it.product_id??it.id??"");const q=Number(it.quantity||1);const p=prodMap[pid];const nm=p?p.name:(it.product_name||("Product "+pid));const pr=p?p.price:Number(it.unit_price||it.price||0);return `<div class="item-line"><span>${esc(nm)} × ${q}</span><span>${money(pr*q)}</span></div>`;}).join("");
+      el.innerHTML=`<b>Items</b>${rows}`; return;
+    }
+  }catch(_){}
+  const { data, error } = await db.from("order_items").select("product_name,unit_price,quantity,line_total").eq("order_id", orderId);
   if (!el) return;
   if (error) { el.textContent = error.message; return; }
   if (!data?.length) { el.innerHTML = "<span class='muted'>No item details.</span>"; return; }
@@ -90,13 +103,32 @@ $("refreshOrders").onclick = loadOrders;
 $("orderFilter").onchange = loadOrders;
 
 async function loadReviews(){
-  const filter=$("reviewFilter").value;msg("reviewsMsg","Loading reviews…");let query=db.from("product_reviews").select("*,products(name)").order("created_at",{ascending:false});
-  if(filter==="pending")query=query.eq("approved",false);else if(filter==="approved")query=query.eq("approved",true);
-  const {data,error}=await query;if(error){msg("reviewsMsg",error.message);$("reviewList").innerHTML="";return}
-  msg("reviewsMsg",data?.length?`${data.length} review(s)`:"No reviews yet.");const box=$("reviewList");
-  if(!data?.length){box.innerHTML="<p class='muted'>No reviews match this filter.</p>";return}
-  box.innerHTML=data.map(r=>`<article class="review-admin-card"><div class="review-admin-head"><div><strong>${esc(r.products?.name||"Product")}</strong><div class="muted">${new Date(r.created_at).toLocaleString()}</div></div><span class="stars">${"★".repeat(Number(r.rating))}${"☆".repeat(5-Number(r.rating))}</span></div><p>${esc(r.review_text||"No written review.")}</p><div class="muted">By ${esc(r.reviewer_name)}</div><div class="review-admin-actions">${r.approved?`<button class="secondary review-toggle" data-id="${esc(r.id)}" data-approved="false">HIDE</button>`:`<button class="review-toggle" data-id="${esc(r.id)}" data-approved="true">APPROVE</button>`}<button class="secondary review-delete" data-id="${esc(r.id)}">DELETE</button></div></article>`).join("");
-  box.querySelectorAll(".review-toggle").forEach(b=>b.addEventListener("click",async()=>{const {error}=await db.from("product_reviews").update({approved:b.dataset.approved==="true"}).eq("id",b.dataset.id);if(error)alert(error.message);await loadReviews()}));
+  const filter=$("reviewFilter").value;msg("reviewsMsg","Loading reviews…");
+  // Dual-schema: live DB uses customer_name+status, repo SQL uses reviewer_name+approved
+  let data=null,error=null,schema="new";
+  let q=db.from("product_reviews").select("*,products(name)").order("created_at",{ascending:false});
+  if(filter==="pending")q=q.eq("status","pending");else if(filter==="approved")q=q.eq("status","approved");
+  let r=await q;
+  if(r.error && /approved|status/i.test(r.error.message||"")){
+    schema="old";
+    let q2=db.from("product_reviews").select("*,products(name)").order("created_at",{ascending:false});
+    if(filter==="pending")q2=q2.eq("approved",false);else if(filter==="approved")q2=q2.eq("approved",true);
+    r=await q2;
+  }
+  if(r.error && /customer_name|reviewer_name|product_reviews/i.test(r.error.message||"")){
+    // Last resort: plain select without join
+    let q3=db.from("product_reviews").select("*").order("created_at",{ascending:false});
+    r=await q3; schema="new";
+  }
+  data=r.data;error=r.error;
+  if(error){msg("reviewsMsg",error.message+" — SUPABASE_FIX.sql run karen.");$("reviewList").innerHTML="";return}
+  let rows=data||[];
+  if(schema==="new"&&filter!=="all")rows=rows.filter(x=>filter==="pending"?(x.status||"").toLowerCase()!=="approved":(x.status||"").toLowerCase()==="approved");
+  msg("reviewsMsg",rows.length?`${rows.length} review(s)`:"No reviews yet.");const box=$("reviewList");
+  if(!rows.length){box.innerHTML="<p class='muted'>No reviews match this filter.</p>";return}
+  const norm=(x)=>({id:x.id,pname:x.product_name||x.products?.name||"Product",rating:Number(x.rating)||0,text:x.review_text||"No written review.",by:x.customer_name||x.reviewer_name||"Customer",time:x.created_at?new Date(x.created_at).toLocaleString():"",approved:(x.status?(String(x.status).toLowerCase()==="approved"):!!x.approved)});
+  box.innerHTML=rows.map(x=>{const r2=norm(x);return `<article class="review-admin-card"><div class="review-admin-head"><div><strong>${esc(r2.pname)}</strong><div class="muted">${esc(r2.time)}</div></div><span class="stars">${"★".repeat(r2.rating)}${"☆".repeat(5-r2.rating)}</span></div><p>${esc(r2.text)}</p><div class="muted">By ${esc(r2.by)}</div><div class="review-admin-actions">${r2.approved?`<button class="secondary review-toggle" data-id="${esc(x.id)}" data-act="hide">HIDE</button>`:`<button class="review-toggle" data-id="${esc(x.id)}" data-act="approve">APPROVE</button>`}<button class="secondary review-delete" data-id="${esc(x.id)}">DELETE</button></div></article>`;}).join("");
+  box.querySelectorAll(".review-toggle").forEach(b=>b.addEventListener("click",async()=>{let err=null;if(schema==="new"){const {error}=await db.from("product_reviews").update({status:b.dataset.act==="approve"?"approved":"pending"}).eq("id",b.dataset.id);err=error;}else{const {error}=await db.from("product_reviews").update({approved:b.dataset.act==="approve"}).eq("id",b.dataset.id);err=error;}if(err)alert(err.message);await loadReviews()}));
   box.querySelectorAll(".review-delete").forEach(b=>b.addEventListener("click",async()=>{if(!confirm("Delete this review?"))return;const {error}=await db.from("product_reviews").delete().eq("id",b.dataset.id);if(error)alert(error.message);await loadReviews()}));
 }
 $("refreshReviews").onclick=loadReviews;$("reviewFilter").onchange=loadReviews;

@@ -182,3 +182,34 @@ body{overflow-x:hidden;}
   margin-bottom: 12px !important;
   line-height: 1.2;
 }
+/* ===== ELORA FIX PACK (2026-09-21) ===== */
+/* 1) Reviews heading overlap + full view fix */
+.reviews-section{padding:75px 6%;overflow:hidden}
+.reviews-head{flex-wrap:wrap;align-items:flex-end}
+.reviews-head h2{line-height:1.15;margin:0;overflow-wrap:anywhere}
+.reviews-intro{margin-top:14px!important;margin-bottom:22px;display:block}
+#reviewMsg{font-size:12px;color:var(--gold2);max-width:45%;text-align:right}
+/* 2) Review box clipping fix - form kabhi bahar nahi niklegi */
+.card{min-width:0;overflow:hidden}
+.review-box{max-width:100%;overflow:hidden}
+.review-form{grid-template-columns:1fr 1fr;max-width:100%}
+.review-form label{min-width:0}
+.review-form input,.review-form select,.review-form textarea{max-width:100%;min-width:0;box-sizing:border-box}
+/* 3) Mobile: chhoti screen par 1 column taake pura view aaye */
+@media(max-width:560px){
+  .products{grid-template-columns:1fr!important}
+  .review-summary{grid-template-columns:1fr!important}
+  .review-form{grid-template-columns:1fr!important}
+  .reviews-section{padding:45px 16px}
+  #reviewMsg{max-width:100%;text-align:left}
+  .section-head{flex-direction:column;align-items:flex-start}
+}
+/* 4) Order success banner (cart 0 ke baad bhi nazar aayega) */
+.order-success{display:flex;gap:14px;align-items:flex-start;border:1.5px solid var(--gold);background:#141007;padding:16px;margin-bottom:16px;border-radius:6px;color:#f0d48a;line-height:1.6}
+.order-success[hidden]{display:none!important}
+.success-tick{width:34px;height:34px;flex:0 0 34px;border-radius:50%;display:grid;place-items:center;background:var(--gold2);color:#111;font-weight:900;font-size:18px}
+/* 5) Hashtags reach */
+.hashtags{margin:12px 0 0;color:#8a7a55;font-size:12px;line-height:1.7;max-width:520px}
+/* 6) Horizontal scroll safety */
+html,body{overflow-x:hidden}
+img{max-width:100%}
